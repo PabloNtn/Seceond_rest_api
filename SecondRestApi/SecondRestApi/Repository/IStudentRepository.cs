@@ -1,4 +1,5 @@
-﻿using SecondRestApi.Model;
+﻿using Microsoft.AspNetCore.Mvc;
+using SecondRestApi.Model;
 using System.Collections.Generic;
 
 namespace SecondRestApi.Repository
@@ -6,9 +7,9 @@ namespace SecondRestApi.Repository
     public interface IStudentRepository
     {
         Student Create(Student student);
-        //Person FindById(long id);
+        Student FindById(long id);
         List<Student> FindAll();
-        void Delete(string name);
+        ActionResult<int> Delete(long id);
         Student Update(Student student);
     }
 }

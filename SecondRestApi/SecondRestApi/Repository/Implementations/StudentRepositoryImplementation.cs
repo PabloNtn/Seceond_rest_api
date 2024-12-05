@@ -3,11 +3,13 @@ using System;
 using System.Collections.Generic;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SecondRestApi.Repository.Implementations
 {
     public class StudentRepositoryImplementation : IStudentRepository
     {
+
         public List<Student> FindAll()
         {
             List<Student> studentList = new();
@@ -21,14 +23,19 @@ namespace SecondRestApi.Repository.Implementations
                     {
                         ControllerConnectionDataBase(con);
 
-                        cmd.CommandText = "addStudent";
+                        cmd.CommandText = "prALU_SEL_BUSCAR";
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add("cur", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
 
                         OracleDataReader reader = cmd.ExecuteReader();
                         while (reader.Read())
                         {
-                            var student = new Student(reader.GetString(0), reader.GetString(1), DateTime.Parse(reader.GetString(2)));
+                            var student = new Student(
+                                int.Parse(reader.GetString(0)),
+                                reader.GetString(1),
+                                reader.GetString(2),
+                                DateTime.Parse(reader.GetString(3))
+                                );
                             studentList.Add(student);
                         }
                         reader.Dispose();
@@ -46,16 +53,50 @@ namespace SecondRestApi.Repository.Implementations
             return studentList;
         }
 
-        //public Person FindById(long id)
-        //{
+        public Student FindById(long id)
+        {
+            Student student = new();
+            if (id > 0 || id < 100)
+            {
+                string conString = "User Id=SYSTEM;Password=257729;Data Source=localhost:1521/xe;";
+                using (OracleConnection con = new OracleConnection(conString))
+                {
+                    using (OracleCommand cmd = con.CreateCommand())
+                    {
+                        try
+                        {
+                            ControllerConnectionDataBase(con);
 
-        //    //return new Person
-        //    //{
-        //    //    FirstName = "Pablo",
-        //    //    LastName = "Monteiro",
-        //    //    Adress = "Rua catatau",
-        //    //};
-        //}
+                            cmd.CommandText = "prALU_SEL_BYID";
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("cur", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
+                            cmd.Parameters.Add("id", id).Direction = ParameterDirection.Input;
+
+                            OracleDataReader reader = cmd.ExecuteReader();
+                            while (reader.Read())
+                            {
+                                student = new Student(
+                                int.Parse(reader.GetString(0)),
+                                reader.GetString(1),
+                                reader.GetString(2),
+                                DateTime.Parse(reader.GetString(3))
+                                );
+                            }
+                            reader.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                        finally
+                        {
+                            ControllerConnectionDataBase(con);
+                        }
+                    }
+                }
+            }
+            return student;
+        }
 
         public Student Create(Student student)
         {
@@ -68,7 +109,7 @@ namespace SecondRestApi.Repository.Implementations
                     {
                         ControllerConnectionDataBase(con);
 
-                        cmd.CommandText = "insertStudent";
+                        cmd.CommandText = "prALU_INS";
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add("name", student.Alu_nm).Direction = ParameterDirection.Input;
                         cmd.Parameters.Add("tele", student.Alu_nr_tel).Direction = ParameterDirection.Input;
@@ -89,8 +130,9 @@ namespace SecondRestApi.Repository.Implementations
             return student;
         }
 
-        public void Delete(String name)
+        public ActionResult<int> Delete(long id)
         {
+            bool testeDelecao = false;
             string conString = "User Id=SYSTEM;Password=257729;Data Source=localhost:1521/xe;";
             using (OracleConnection con = new OracleConnection(conString))
             {
@@ -100,11 +142,14 @@ namespace SecondRestApi.Repository.Implementations
                     {
                         ControllerConnectionDataBase(con);
 
-                        cmd.CommandText = "deleteStudent";
+                        cmd.CommandText = "prALU_UPD_LOG";
                         cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("name", name).Direction = ParameterDirection.Input;
+                        cmd.Parameters.Add("id", id).Direction = ParameterDirection.Input;
+                        cmd.Parameters.Add("DATA", DateTime.Now.ToString("dd/MM/yy HH:mm")).Direction = ParameterDirection.Input;
 
                         cmd.ExecuteNonQuery();
+
+                        testeDelecao = true;
                     }
                     catch (Exception ex)
                     {
@@ -116,6 +161,9 @@ namespace SecondRestApi.Repository.Implementations
                     }
                 }
             }
+            if (!testeDelecao)
+                return null;
+            return Convert.ToInt32(id);
         }
 
         public Student Update(Student student)
@@ -129,8 +177,9 @@ namespace SecondRestApi.Repository.Implementations
                     {
                         ControllerConnectionDataBase(con);
 
-                        cmd.CommandText = "updateStudent";
+                        cmd.CommandText = "prALU_UPD";
                         cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("id", student.Alu_id).Direction = ParameterDirection.Input;
                         cmd.Parameters.Add("name", student.Alu_nm).Direction = ParameterDirection.Input;
                         cmd.Parameters.Add("tele", student.Alu_nr_tel).Direction = ParameterDirection.Input;
                         cmd.Parameters.Add("data", student.Alu_dt_nascimento).Direction = ParameterDirection.Input;
